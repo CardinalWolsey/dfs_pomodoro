@@ -5,6 +5,7 @@ const Todo = require(__dirname + '/../models/todo_items');
 var todoRouter = module.exports = exports = express.Router();
 
 todoRouter.post('/todo', bodyParser.json(), function(req, res) {
+  console.log(req.body);
   var newTodo = new Todo(req.body);
   newTodo.save(function(err, data) {
     if(err) {
@@ -17,9 +18,10 @@ todoRouter.post('/todo', bodyParser.json(), function(req, res) {
 todoRouter.get('/todo', function(req, res) {
   Todo.find({}, function(err, data) {
     if(err) {
+      console.log(err);
       return res.status(500).json({msg: 'server error getting all todos'});
     }
-    res.status(500).json(data)
+    res.json(data);
   });
 });
 
