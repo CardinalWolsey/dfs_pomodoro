@@ -17,9 +17,9 @@ class App extends Component {
       seconds: 0,
       intervalHandle: null,
       workBreak: false,
-      pomodoroLength: 6,
-      breakLength: 3,
-      longBreakLength: 4,
+      pomodoroLength: 1500,
+      shortBreakLength: 300,
+      longBreakLength: 1200,
       breakNumber: 0,
       showAlert: false,
       addTodoName: '',
@@ -111,11 +111,7 @@ class App extends Component {
   }
 
   switchBreakPomodoro() {
-    if((this.state.breakNumber + 1) % 4 === 0) {
-      var breakLength = this.state.longBreakLength;
-    } else {
-      var breakLength = this.state.breakLength;
-    }
+    var breakLength = ((this.state.breakNumber + 1) % 4 === 0) ? this.state.longBreakLength : this.state.shortBreakLength;
 
     if (!this.state.workBreak) {
       this.setState({
@@ -185,7 +181,8 @@ class App extends Component {
           <div className="todo-list">
             <TodoHeader
               handleUpdateAddTodo={(e) => this.handleUpdateAddTodo(e)}
-              handleAddTodo={(e) => this.handleAddTodo()}
+              handleAddTodo={() => this.handleAddTodo()}
+              addTodoName={this.state.addTodoName}
               />
             <TodoRows
               data={this.state.data}

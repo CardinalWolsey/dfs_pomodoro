@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 class TodoRows extends Component {
   render() {
     var listItems = this.props.data.map((item) =>
-      <li className="list-item">
+      <li className="list-item" key={item._id}>
         {item.todo}
         <button
           className="list-item-button"

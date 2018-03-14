@@ -6,8 +6,16 @@ class TodoHeader extends Component {
       <div className="todo-header">
         <span>Todo Items:</span>
         <div>
-          <input onChange={(e) => this.props.handleUpdateAddTodo(e)}></input>
-          <button className="add-todo-button" onClick={() => this.props.handleAddTodo()}>Add</button>
+          <form onSubmit={(e) => {
+              e.preventDefault();
+              this.props.handleAddTodo()}}>
+            <input
+              onChange={(e) => this.props.handleUpdateAddTodo(e)}
+              value={this.props.addTodoName}
+              >
+            </input>
+            <button className="add-todo-button">Add</button>
+          </form>
         </div>
       </div>
     );
