@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
-import Timer from './timer.js';
-import jQuery from 'jquery';
 import axios from 'axios';
+import Timer from './timer.js';
+import TodoHeader from './todo_header.js';
+import TodoRows from './todo_rows.js'
 
 class App extends Component {
   constructor(props) {
@@ -12,21 +12,81 @@ class App extends Component {
     this.state = {
       data: [],
       timerRunning: false,
-      time: 20,
+      time: 0,
       minutes: 0,
       seconds: 0,
-      intervalHandler: null,
+      intervalHandle: null,
       workBreak: false,
-      pomodoroLength: 20,
-      breakLength: 10,
+      pomodoroLength: 6,
+      breakLength: 3,
+      longBreakLength: 4,
+      breakNumber: 0,
       showAlert: false,
       addTodoName: '',
     }
-
   }
 
   componentDidMount() {
     this.getTodos();
+    this.setTime(this.state.pomodoroLength)
+  }
+
+  //AJAX methods
+  getTodos() {
+    axios.get('http://localhost:5000/api/todo')
+      .then((res) => {
+        this.setState({
+          data: res.data,
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+  handleAddTodo() {
+    if (this.state.addTodoName.length > 0) {
+      axios.post('http://localhost:5000/api/todo', {
+        todo: this.state.addTodoName,
+      })
+      .then(() => {
+        this.setState({
+          addTodoName: '',
+        });
+      })
+      .then(() => {
+        this.getTodos();
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+    }
+  }
+
+  handleDeleteTodo(todo) {
+    axios.delete('http://localhost:5000/api/todo', {
+      data: {
+        id: todo._id
+      }
+    })
+    .then(() => {
+      this.getTodos();
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+  }
+
+  //Helper methods
+  setTime(time) {
+    this.setState({
+      time: time,
+    },() => {
+      this.formatTimes();
+    });
+  }
+
+  formatTimes() {
     var minutes = parseInt(this.state.time / 60, 10);
     var minutesFormatted = minutes < 10 ? "0" + minutes : minutes;
     var seconds = parseInt(this.state.time % 60, 10);
@@ -38,170 +98,103 @@ class App extends Component {
     });
   }
 
-  updateRunning() {
-    this.setState({
-      timerRunning: !this.state.timerRunning
-    });
-  }
-
-  handleDeleteTodo(todo) {
-    console.log(todo._id);
-    axios.delete('http://localhost:5000/api/todo', {
-      data: {
-        id: todo._id
-      }
-    })
-    .then(function (response) {
-      console.log(response);
-    })
-    .then(() => {
-      this.getTodos();
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
-  }
-
   handleUpdateAddTodo(data) {
     this.setState({
       addTodoName: data.target.value
     });
   }
 
-  handleAddTodo() {
-    if (this.state.addTodoName.length > 0) {
-      axios.post('http://localhost:5000/api/todo', {
-        todo: this.state.addTodoName,
-      })
-      .then(function (response) {
-        console.log(response);
-      })
-      .then(() => {
-        this.setState({
-          addTodoName: '',
-        });
-      })
-      .then(() => {
-        this.getTodos();
-      })
-      .catch(function (error) {
-        console.log(error);
+  updateRunning() {
+    this.setState({
+      timerRunning: !this.state.timerRunning,
+    });
+  }
+
+  switchBreakPomodoro() {
+    if((this.state.breakNumber + 1) % 4 === 0) {
+      var breakLength = this.state.longBreakLength;
+    } else {
+      var breakLength = this.state.breakLength;
+    }
+
+    if (!this.state.workBreak) {
+      this.setState({
+        timerRunning: false,
+        time: breakLength,
+        workBreak: true,
+        showAlert: true,
+      },() => {
+        this.formatTimes();
+      });
+    } else {
+      this.setState({
+        timerRunning: false,
+        time: this.state.pomodoroLength,
+        workBreak: false,
+        showAlert: true,
+        breakNumber: this.state.breakNumber + 1,
+      },() => {
+        this.formatTimes();
       });
     }
   }
 
-  getTodos() {
-    console.log('get todos called');
-    axios.get('http://localhost:5000/api/todo')
-      .then(res => {
-        this.setState({
-          data: res.data,
-        });
-      });
+  //Timer
+  startStopTimer() {
+    if (!this.state.timerRunning) {
+      this.runTimer();
+      this.updateRunning();
+    } else {
+      clearInterval(this.state.intervalHandle);
+      this.updateRunning()
+    }
   }
 
   runTimer() {
-    if (!this.state.timerRunning) {
-      var handle = setInterval(() => {
-        var timer = this.state.time - 1;
-        var minutes = parseInt(this.state.time / 60, 10);
-        var minutesFormatted = minutes < 10 ? "0" + minutes : minutes;
-        var seconds = parseInt(this.state.time % 60, 10);
-        var secondsFormatted = seconds = seconds < 10 ? "0" + seconds : seconds;
-        this.setState({
-          time: timer >= 0 ? timer : 0,
-          minutes: minutesFormatted,
-          seconds: secondsFormatted,
-          timerRunning: true,
-          intervalHandler: handle,
-          showAlert: false,
-        }, function() {
-          if (this.state.time <= 0) {
-            clearInterval(this.state.intervalHandler);
-            if (!this.state.workBreak) {
-              this.setState({
-                timerRunning: false,
-                time: this.state.breakLength,
-                workBreak: true,
-                showAlert: true,
-              });
-            } else {
-              this.setState({
-                timerRunning: false,
-                time: this.state.pomodoroLength,
-                workBreak: false,
-                showAlert: true,
-              });
-            }
-          }
-        });
-      }, 1000)
-    } else {
-      console.log('this.state.intervalhandler');
-      console.log(this.state.intervalhandler);
-      clearInterval(this.state.intervalHandler);
-      this.setState({
-        timerRunning: false,
-      });
-    }
+    var intervalHandle = setInterval(() => {
+      if (this.state.time > 1) {
+        this.setTime(this.state.time - 1);
+      } else if (this.state.time === 1) {
+        this.setTime(this.state.time - 1);
+        clearInterval(this.state.intervalHandle);
+        this.switchBreakPomodoro();
+      }
+    }, 1000)
+
+    this.setState({
+      intervalHandle: intervalHandle,
+      showAlert: false,
+    });
   }
 
-
   render() {
-    if(this.state.data) {
-      var listItems = this.state.data.map((item) =>
-        <li className="list-item">
-          {item.todo}
-          <button
-            className="list-item-button"
-            onClick={() => this.handleDeleteTodo(item)}>delete</button>
-        </li>)
-    }
-
     return (
       <div className="app">
         <div className="app-header">
           <h1 className="app-title">Pomodoro Timer</h1>
         </div>
         <div className="app-body">
-          <div className="timer">
-            <time className="clock">{this.state.minutes}:{this.state.seconds}</time>
-            <button className="timer-button"
-              onClick={() => this.runTimer()}>
-              {this.state.timerRunning ? 'Pause' : 'Start'} {this.state.workBreak ? 'Break' : 'Pomodoro'}
-            </button>
-            {this.state.showAlert ?
-              <Alert
-                workBreak={this.state.workBreak}
-                />
-              : null}
-          </div>
+          <Timer
+            workBreak={this.state.workBreak}
+            minutes={this.state.minutes}
+            seconds={this.state.seconds}
+            timerRunning={this.state.timerRunning}
+            showAlert={this.state.showAlert}
+            startStopTimer={() => this.startStopTimer()}
+            />
           <div className="todo-list">
-            <div className="todo-header">
-              <span>Todo Items:</span>
-              <div>
-                <input onChange={(e) => this.handleUpdateAddTodo(e)}></input>
-                <button className="add-todo-button" onClick={() => this.handleAddTodo()}>Add</button>
-              </div>
-            </div>
-            <ul className="list-items">{this.state.data ? listItems : 'loading list items'}
-            </ul>
+            <TodoHeader
+              handleUpdateAddTodo={(e) => this.handleUpdateAddTodo(e)}
+              handleAddTodo={(e) => this.handleAddTodo()}
+              />
+            <TodoRows
+              data={this.state.data}
+              handleDeleteTodo={(item) => this.handleDeleteTodo(item)}
+              />
           </div>
         </div>
-
-
       </div>
     );
-  }
-}
-
-class Alert extends Component {
-  render() {
-    return (
-      <div className="alert">
-        {this.props.workBreak ? 'pomodoro complete' : 'break complete'}
-      </div>
-    )
   }
 }
 
